@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>동일여고 진로독서 챗봇</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Dongil Library Career Reading Bot</p>
+        <h1>동일여고 진로독서 챗봇</h1>
+        <p>진로, 학과, 관심사, 난이도를 말하면 소장도서 중에서 추천해요.</p>
+      </div>
+      <div class="heroCard" id="todayBox">오늘의 책을 불러오는 중...</div>
+    </section>
+
+    <section class="quick">
+      <button data-msg="오늘의 독서 추천">오늘의 독서 추천</button>
+      <button data-msg="운명의 책 뽑기">운명의 책 뽑기</button>
+      <button data-msg="고1이 읽기 쉬운 의학 책 추천">쉬운 진로책</button>
+      <button data-msg="생기부 탐구주제용 AI 책 추천">생기부용 추천</button>
+      <button data-msg="수학교사가 되고 싶어">진로 맞춤</button>
+    </section>
+
+    <section class="chat">
+      <div id="messages" class="messages">
+        <div class="msg bot">안녕하세요. 예를 들어 <b>“간호학과 관련 쉬운 책 추천”</b>, <b>“AI 개발자 심화 책”</b>, <b>“오늘의 독서 추천”</b>처럼 입력해 보세요.</div>
+      </div>
+      <form id="chatForm" class="inputRow">
+        <input id="chatInput" autocomplete="off" placeholder="진로, 학과, 관심사, 난이도를 입력하세요" />
+        <button>보내기</button>
+      </form>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

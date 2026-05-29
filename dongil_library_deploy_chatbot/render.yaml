@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: dongil-library-career-chatbot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python prepare_data.py && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
