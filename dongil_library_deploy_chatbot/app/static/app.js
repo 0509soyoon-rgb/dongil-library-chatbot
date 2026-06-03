@@ -13,6 +13,7 @@ function bookCard(b){
     <div>${tags}</div>
     <div class="small"><b>난이도</b> ${stars(Number(b.difficulty || 2))} ${escapeHtml(b.difficulty_label || '')}</div>
     <div class="small"><b>관련 진로</b> ${escapeHtml(b.careers || '')}</div>
+    <div class="small"><b>내용 요약</b> ${escapeHtml(b.summary || '')}</div>
     <div class="small"><b>추천 이유</b> ${escapeHtml(b.recommendation_reason || '')}</div>
     <div class="topic"><b>탐구주제</b><br>${escapeHtml(b.exploration_topic || '')}</div>
   </div>`;

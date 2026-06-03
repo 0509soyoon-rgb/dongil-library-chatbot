@@ -29,6 +29,77 @@ CAREER_ALIASES = {
 }
 DIFFICULTY_WORDS = {"쉬운":(1,2), "가벼운":(1,2), "입문":(1,2), "고1":(1,2), "보통":(2,3), "도전":(3,4), "심화":(4,5), "어려운":(4,5), "전문":(5,5)}
 
+TITLE_STOPWORDS = [
+    "추천", "책", "도서", "관련", "해줘", "찾아줘", "알려줘", "검색", "있어", "있나요",
+    "설명", "줄거리", "내용", "정보", "뭐야", "무엇", "읽고", "싶어", "대한", "에 대해", "은", "는", "이", "가"
+]
+RECOMMEND_INTENT_WORDS = ["추천", "진로", "학과", "생기부", "세특", "탐구", "오늘", "운명", "뽑기", "랜덤", "아무거나", "쉬운", "심화", "어려운"]
+
+def normalize_title(text: str) -> str:
+    return re.sub(r"[^가-힣a-zA-Z0-9]", "", (text or "").lower())
+
+def clean_title_query(text: str) -> str:
+    q = (text or "").strip()
+    q = re.sub(r"[?!.,~]+", " ", q)
+    for w in TITLE_STOPWORDS:
+        q = q.replace(w, " ")
+    q = re.sub(r"\s+", " ", q).strip()
+    return q
+
+def find_title_match(text: str):
+    """
+    책 제목 검색용 함수.
+    1) 제목이 정확히 같은 책
+    2) 제목이 검색어로 시작하는 책
+    3) 제목에 검색어가 포함된 책
+    순서로 한 권을 고른다.
+    """
+    q = clean_title_query(text)
+    nq = normalize_title(q)
+    if len(nq) < 2:
+        return None
+
+    with conn() as con:
+        rows = con.execute(
+            """
+            SELECT * FROM books
+            WHERE title LIKE ?
+            LIMIT 80
+            """,
+            (f"%{q}%",)
+        ).fetchall()
+
+    if not rows:
+        return None
+
+    def score(row):
+        title = row["title"] or ""
+        nt = normalize_title(title)
+        if nt == nq:
+            group = 0
+        elif nt.startswith(nq):
+            group = 1
+        elif nq in nt:
+            group = 2
+        else:
+            group = 9
+        # 같은 조건이면 제목이 짧은 책을 우선한다.
+        return (group, len(nt), row["id"])
+
+    best = sorted(rows, key=score)[0]
+    if score(best)[0] >= 9:
+        return None
+    return dict(best)
+
+def looks_like_title_search(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return False
+    # 추천/진로 요청이면 제목 상세 검색보다 추천을 우선한다.
+    if any(w in t for w in RECOMMEND_INTENT_WORDS):
+        return False
+    return find_title_match(t) is not None
+
 class ChatIn(BaseModel):
     message: str
 
@@ -99,6 +170,18 @@ def handle_chat(text: str) -> dict[str, Any]:
     text = (text or "").strip()
     if not text:
         return {"reply":"원하는 진로, 학과, 관심사, 난이도를 입력해 주세요. 예: '고1이 읽기 쉬운 의학 책 추천'", "books":[]}
+    # 책 제목만 입력한 경우에는 추천 목록이 아니라 그 책의 상세 정보를 먼저 보여준다.
+    # 예: "소나기", "데미안", "아몬드 줄거리"
+    title_match = None
+    if not any(w in text for w in RECOMMEND_INTENT_WORDS):
+        title_match = find_title_match(text)
+    if title_match:
+        return {
+            "reply": f"『{title_match.get('title', '')}』 도서 정보입니다.",
+            "books": [title_match],
+            "mode": "book_detail"
+        }
+
     career = detect_career(text)
     if any(w in text for w in ["오늘", "오늘의", "데일리"]):
         books = daily_books(3, career)
