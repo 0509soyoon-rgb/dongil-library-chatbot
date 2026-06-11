@@ -19,6 +19,7 @@
       <button class="feature" id="todayBtn"><b>📖 오늘의 책</b><span>매일 바뀌는 실제 소장도서</span></button>
       <button class="feature" id="typeBtn"><b>🧠 독서 유형 테스트</b><span>16가지 Book Type</span></button>
       <button class="feature" id="randomBtn"><b>🎲 운명의 책 뽑기</b><span>뜻밖의 소장도서 발견</span></button>
+      <button class="feature" id="counselBtn"><b>💬 상담 챗봇</b><span>진로·독서·공부·마음 고민 정리</span></button>
       <button class="feature" data-career="의학/보건"><b>🩺 의학·보건</b><span>의대·간호·약학</span></button>
       <button class="feature" data-career="공학/AI"><b>💻 공학·AI</b><span>개발자·컴공·데이터</span></button>
       <button class="feature" data-career="교육/교사"><b>🏫 교육·교사</b><span>사범대·교육학</span></button>
@@ -35,6 +36,22 @@
     </section>
 
     <section id="results" class="results"></section>
+
+    <section id="counselPanel" class="panel hidden">
+      <h2>💬 상담 챗봇</h2>
+      <p class="hint">전문 상담을 대신하지 않습니다. 진로·독서·공부·마음 고민을 정리하고, 관련된 실제 소장도서를 함께 추천합니다.</p>
+      <div class="quickCounsel">
+        <button class="chip counselChip">간호학과 갈지 고민돼</button>
+        <button class="chip counselChip">책 읽기가 너무 부담돼</button>
+        <button class="chip counselChip">공부 의욕이 없어</button>
+        <button class="chip counselChip">요즘 친구관계가 힘들어</button>
+      </div>
+      <div class="searchbar">
+        <input id="counselInput" placeholder="고민을 한두 문장으로 적어보세요" />
+        <button id="sendCounsel">상담하기</button>
+      </div>
+      <div id="counselResult" class="counselResult"></div>
+    </section>
 
     <section id="typeTest" class="panel hidden">
       <h2>🧠 독서 유형 테스트</h2>
@@ -53,7 +70,7 @@
   </div>
 
   <footer>
-    <p>※ 제목·저자·출판사·청구기호는 업로드된 동일여고 소장도서 원본 기준입니다. 장르·태그·난이도·추천 이유는 자동 보조 분류입니다.</p>
+    <p>※ 제목·저자·출판사·청구기호는 업로드된 동일여고 소장도서 원본 기준입니다. 장르·태그·난이도·추천 이유·간략 소개는 자동 보조 분류입니다.</p>
   </footer>
   <script src="/static/app.js"></script>
 </body>

@@ -28,7 +28,7 @@ function bookCard(b){
     <h3>${esc(b.title)}</h3>
     <div class="author">${esc(b.author || '저자 정보 없음')}</div>
     <div class="pillRow"><span class="pill">${esc(b.genre || '미분류')}</span><span class="pill">${stars(b.difficulty)} ${esc(b.difficulty_label)}</span></div>
-    <p>${esc(b.intro || '동일여고 소장도서입니다.')}</p>
+    <p><b>간략 소개</b><br>${esc(b.intro || '동일여고 소장도서입니다.')}</p>
     <p><b>추천 이유</b><br>${esc(b.recommend_reason || '')}</p>
     <div class="sourceMark">실제 소장 도서 · 원본 자료명 그대로</div>
   </article>`;
@@ -67,7 +67,7 @@ async function openBook(id){
       </section>
       <section class="box">
         <h3>AI 보조 정보</h3>
-        <p>${esc(b.intro)}</p>
+        <p><b>간략 소개</b><br>${esc(b.intro)}</p>
         <p><b>추천 이유</b><br>${esc(b.recommend_reason)}</p>
         <p><b>관련 진로</b><br>${(b.careers || []).map(esc).join(', ') || '자동 분류 없음'}</p>
         <p><b>태그</b><br>${(b.tags || []).map(t=>`<span class="pill">${esc(t)}</span>`).join(' ')}</p>
@@ -139,6 +139,25 @@ async function calcType(){
   renderBooks(`🧠 ${data.name}에게 맞는 소장도서`, '독서유형 결과에 맞는 실제 소장도서입니다.', data.books);
 }
 
+
+async function sendCounsel(q){
+  q = (q || $('#counselInput').value).trim();
+  if(!q){ $('#counselInput').focus(); return; }
+  $('#counselResult').innerHTML = `<div class="panel"><p>상담 답변을 준비하는 중...</p></div>`;
+  const data = await getJSON(`/api/counsel?q=${encodeURIComponent(q)}`);
+  $('#counselResult').innerHTML = `
+    <div class="counselBox ${data.mode === 'crisis' ? 'danger' : ''}">
+      <h3>${esc(data.title)}</h3>
+      <p>${esc(data.message)}</p>
+      <h4>지금 해볼 수 있는 것</h4>
+      <ul>${(data.steps || []).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+      <p class="hint">상담 챗봇은 전문 상담을 대체하지 않습니다. 위험하거나 오래 지속되는 고민은 반드시 주변 어른이나 상담 선생님에게 알려주세요.</p>
+    </div>`;
+  if(data.books && data.books.length){
+    renderBooks('💬 상담과 연결되는 실제 소장도서', '상담 내용과 연결해 읽어볼 수 있는 실제 소장도서입니다.', data.books);
+  }
+}
+
 async function init(){
   try{
     const m = await getJSON('/api/meta');
@@ -155,6 +174,10 @@ $('#todayBtn').addEventListener('click', today);
 $('#randomBtn').addEventListener('click', randomBook);
 document.querySelectorAll('[data-career]').forEach(b => b.addEventListener('click', () => career(b.dataset.career)));
 $('#typeBtn').addEventListener('click', () => { $('#typeTest').classList.toggle('hidden'); $('#typeTest').scrollIntoView({behavior:'smooth'}); });
+$('#counselBtn').addEventListener('click', () => { $('#counselPanel').classList.toggle('hidden'); $('#counselPanel').scrollIntoView({behavior:'smooth'}); });
+$('#sendCounsel').addEventListener('click', () => sendCounsel());
+$('#counselInput').addEventListener('keydown', e => { if(e.key === 'Enter') sendCounsel(); });
+document.querySelectorAll('.counselChip').forEach(b => b.addEventListener('click', () => { $('#counselInput').value = b.textContent; sendCounsel(b.textContent); }));
 $('#calcType').addEventListener('click', calcType);
 $('#closeModal').addEventListener('click', () => $('#modal').classList.add('hidden'));
 $('#modal').addEventListener('click', e => { if(e.target.id === 'modal') $('#modal').classList.add('hidden'); });

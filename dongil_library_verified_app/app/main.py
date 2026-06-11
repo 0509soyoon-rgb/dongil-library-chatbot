@@ -193,3 +193,73 @@ def type_result(code: str):
         'recommended_tags': target_tags,
         'books': books
     }
+
+COUNSEL_MODES = {
+    'career': ['진로','학과','대학','직업','꿈','되고 싶','갈까','전공'],
+    'reading': ['책','독서','읽기','읽을','추천','생기부','세특','탐구'],
+    'study': ['공부','시험','성적','수학','영어','국어','집중','계획','의욕'],
+    'mind': ['힘들','지쳐','불안','우울','친구','관계','외롭','스트레스','짜증','슬퍼']
+}
+CRISIS_WORDS = ['죽고 싶','자살','자해','사라지고 싶','극단적','해치고 싶','죽일','살기 싫','목숨']
+
+def counsel_mode(text: str):
+    low = (text or '').lower()
+    for mode, words in COUNSEL_MODES.items():
+        if any(w in low for w in words):
+            return mode
+    return 'general'
+
+def counsel_books(mode: str, text: str, limit: int = 4):
+    if mode == 'career':
+        ck = career_key(text) or '교육/교사'
+        return recommend_by_career(ck, limit, 4)
+    if mode == 'reading':
+        return query_books('SELECT * FROM books WHERE difficulty<=3 ORDER BY RANDOM() LIMIT ?', (limit,))
+    if mode == 'study':
+        return query_books("""SELECT * FROM books
+            WHERE careers_json LIKE '%교육/교사%' OR tags_json LIKE '%청소년%' OR genre='철학/심리'
+            ORDER BY difficulty, RANDOM() LIMIT ?""", (limit,))
+    if mode == 'mind':
+        return query_books("""SELECT * FROM books
+            WHERE careers_json LIKE '%심리/상담%' OR genre='철학/심리' OR tags_json LIKE '%청소년%'
+            ORDER BY difficulty, RANDOM() LIMIT ?""", (limit,))
+    return query_books('SELECT * FROM books WHERE difficulty<=3 ORDER BY RANDOM() LIMIT ?', (limit,))
+
+@app.get('/api/counsel')
+def counsel(q: str = Query(..., min_length=1)):
+    text = q.strip()
+    low = text.lower()
+    if any(w in low for w in CRISIS_WORDS):
+        return {
+            'mode': 'crisis',
+            'title': '지금은 혼자 버티지 말고 바로 도움을 요청해야 해요.',
+            'message': '이 표현은 위험 신호일 수 있습니다. 가까운 보호자, 담임 선생님, 상담 선생님, 믿을 수 있는 어른에게 지금 바로 알려주세요. 즉시 위험하다면 112 또는 119에 연락해야 합니다.',
+            'steps': ['지금 혼자 있지 않기', '가까운 어른에게 그대로 보여주기', '위험한 물건과 거리를 두기', '긴급하면 112 또는 119에 연락하기'],
+            'books': []
+        }
+    mode = counsel_mode(text)
+    if mode == 'career':
+        ck = career_key(text)
+        msg = '진로 고민은 정답을 바로 고르는 것보다, 관심 과목·잘하는 활동·싫지 않은 생활방식을 함께 보는 게 좋아요.'
+        steps = ['관심 있는 과목 2개 적기', '해당 진로에서 실제로 하는 일을 찾아보기', '쉬운 입문서 1권부터 읽기']
+        if ck:
+            msg += f' 지금 문장에서는 {ck} 쪽 관심이 보여요.'
+    elif mode == 'reading':
+        msg = '책이 부담스럽다면 어려운 책부터 고르지 않아도 됩니다. 지금은 끝까지 읽을 수 있는 책을 고르는 게 더 중요해요.'
+        steps = ['난이도 1~3 책부터 고르기', '목차와 첫 10쪽 읽어보기', '마음에 안 맞으면 다른 책으로 바꾸기']
+    elif mode == 'study':
+        msg = '공부 고민은 의지 부족으로만 보면 해결이 어렵습니다. 오늘 할 일을 작게 쪼개서 시작하는 게 가장 현실적이에요.'
+        steps = ['25분만 할 과목 하나 정하기', '문제 수를 작게 정하기', '끝나면 체크하고 쉬기']
+    elif mode == 'mind':
+        msg = '마음이 힘들 때는 해결책보다 먼저 상태를 인정하는 게 필요합니다. 혼자 오래 끌고 가지 말고 믿을 수 있는 사람에게 말해보세요.'
+        steps = ['지금 감정을 한 단어로 적기', '왜 그런지 한 문장만 적기', '믿을 수 있는 친구나 어른에게 짧게 말하기']
+    else:
+        msg = '고민을 조금 더 구체적으로 적어주면 진로, 독서, 공부, 마음 고민 중 어디에 가까운지 나눠서 도와줄 수 있어요.'
+        steps = ['지금 고민을 한 문장으로 적기', '원하는 도움을 고르기: 진로/독서/공부/마음', '관련 책을 하나 골라보기']
+    return {
+        'mode': mode,
+        'title': '상담 챗봇 답변',
+        'message': msg,
+        'steps': steps,
+        'books': counsel_books(mode, text, 4)
+    }

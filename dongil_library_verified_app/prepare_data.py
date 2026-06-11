@@ -83,13 +83,49 @@ def infer_tags(title, author, publisher, genre):
     return list(dict.fromkeys(tags))[:8]
 
 def infer_level(title, callno, genre, year):
-    text = title.lower()
+    """강화된 난이도 분류.
+    원본 책 정보를 바꾸지 않고 제목/청구기호/분야 단서만으로 보조 난이도를 산정합니다.
+    쉬움/보통이 과도하게 많아지지 않도록 전문 분야와 고전/원전 계열은 상향합니다.
+    """
+    text = f'{title} {callno} {genre}'.lower()
     score = 3
-    if any(k in text for k in ['그림책','동화','만화','쉽게','처음','입문','청소년']): score -= 1
-    if any(k in text for k in ['개론','원론','철학','비판','이론','심화','논문','전문','고급']): score += 1
-    if any(k in text for k in ['수학','물리','화학','경제학','철학','법학','통계']): score += 1
-    if genre == '문학': score -= 1
-    if genre in ['철학/심리','자연과학','기술과학','사회과학']: score += 0
+
+    # 쉬운 접근 단서
+    easy_words = ['그림책','동화','만화','웹툰','쉽게','쉬운','처음','입문','청소년','10대','어린이','초등','재미있는','한눈에','교과서 밖']
+    if any(k in text for k in easy_words):
+        score -= 1
+
+    # 가벼운 장르 단서
+    if genre == '문학':
+        score -= 1
+    if any(k in text for k in ['시집','에세이','수필','편지','일기']):
+        score -= 1
+
+    # 심화/전문 단서
+    hard_words = ['개론','원론','철학','비판','이론','심화','논문','전문','고급','원전','고전','사상','담론','인식론','존재론','사회학','정치학','경제학','법학','물리학','화학','생물학','수학','통계','미적분','유전','뇌과학','양자','상대성','문명','세계사','한국사','자본','민주주의']
+    if any(k in text for k in hard_words):
+        score += 1
+    very_hard_words = ['순수이성비판','자본론','국부론','종의 기원','군주론','논어','맹자','장자','도덕경','방법서설','꿈의 해석','코스모스','총균쇠','사피엔스','이기적 유전자']
+    if any(k in text for k in very_hard_words):
+        score += 1
+
+    # KDC 계열로 난이도 보정
+    if genre in ['철학/심리','사회과학','자연과학','기술과학','역사/지리']:
+        score += 1
+    if genre in ['총류/정보','언어','종교']:
+        score += 0
+    if genre == '예술':
+        score -= 0
+
+    # 제목이 아주 짧은 문학 작품은 쉬움으로만 단정하지 않음
+    # 고전/세계문학/전집 계열은 상향
+    if any(k in text for k in ['세계문학','한국문학','고전문학','문학전집','전집','선집']):
+        score += 1
+
+    # 입문 단서가 있어도 전문 단서가 많으면 최소 보통 이상
+    if any(k in text for k in ['철학','경제학','물리학','화학','수학','통계','법학','정치학']) and score < 3:
+        score = 3
+
     return max(1, min(5, score))
 
 def difficulty_label(level):
@@ -110,13 +146,26 @@ def infer_careers(tags, genre, title):
     return list(dict.fromkeys(careers))[:5]
 
 def intro(title, genre):
-    if genre == '문학': return '작품의 인물과 사건을 따라가며 삶과 감정을 생각해 볼 수 있는 소장 도서입니다.'
-    if genre == '자연과학': return '과학적 개념과 탐구 태도를 기르는 데 도움이 되는 소장 도서입니다.'
-    if genre == '기술과학': return '기술, 생활, 공학적 문제 해결을 생각해 볼 수 있는 소장 도서입니다.'
-    if genre == '사회과학': return '사회 문제와 사람들의 관계를 이해하는 데 도움이 되는 소장 도서입니다.'
-    if genre == '철학/심리': return '생각하는 힘과 자기 이해를 넓히는 데 도움이 되는 소장 도서입니다.'
-    if genre == '역사/지리': return '역사와 문화의 흐름을 이해하는 데 도움이 되는 소장 도서입니다.'
-    return '동일여고 소장 자료를 바탕으로 추천할 수 있는 도서입니다.'
+    """책 내용 1~2줄 소개.
+    출판사/교보문고 전문 줄거리를 저장하지 않는 대신, 원본 자료명과 분류를 바탕으로 거짓 제목을 만들지 않는 안전한 자동 소개를 생성합니다.
+    """
+    if genre == '문학':
+        return '인물과 사건을 따라가며 삶, 감정, 관계를 생각해 볼 수 있는 문학 분야 소장도서입니다. 작품의 분위기와 주제를 중심으로 읽기 좋습니다.'
+    if genre == '자연과학':
+        return '과학 개념과 자연 현상을 이해하는 데 도움이 되는 자연과학 분야 소장도서입니다. 핵심 개념을 정리하며 읽기 좋습니다.'
+    if genre == '기술과학':
+        return '기술, 의학, 공학, 생활 속 문제 해결을 다루는 기술과학 분야 소장도서입니다. 진로 탐색과 탐구활동에 연결하기 좋습니다.'
+    if genre == '사회과학':
+        return '사회 문제, 제도, 경제, 정치, 교육 등 현실 세계를 이해하는 데 도움이 되는 사회과학 분야 소장도서입니다.'
+    if genre == '철학/심리':
+        return '생각, 가치관, 마음, 관계를 깊게 바라보는 철학·심리 분야 소장도서입니다. 자기 이해와 토론 주제 만들기에 좋습니다.'
+    if genre == '역사/지리':
+        return '역사적 사건, 인물, 문화와 지역의 흐름을 살펴볼 수 있는 역사·지리 분야 소장도서입니다.'
+    if genre == '예술':
+        return '미술, 음악, 디자인, 건축 등 표현과 창작을 이해하는 데 도움이 되는 예술 분야 소장도서입니다.'
+    if genre == '언어':
+        return '언어 표현, 말과 글, 소통 방식을 이해하는 데 도움이 되는 언어 분야 소장도서입니다.'
+    return '동일여고 원본 소장도서 목록에 있는 자료입니다. 제목과 분류를 바탕으로 탐색할 수 있습니다.'
 
 def reason(title, genre, careers):
     c = ', '.join(careers[:2]) if careers else '진로 탐색'
@@ -204,7 +253,7 @@ def main():
             author, publisher, pub_year, call_no, clean(row[idx['등록일']]), clean(row[idx['수정일']]),
             clean(row[idx['자료상태']]), clean(row[idx['소장처']]), genre, json.dumps(tags, ensure_ascii=False), level,
             difficulty_label(level), json.dumps(careers, ensure_ascii=False), intro(title, genre), reason(title, genre, careers),
-            json.dumps(topics(title, genre, careers), ensure_ascii=False), '원본 정보는 업로드된 동일여고 소장도서 엑셀 기준입니다. 장르·태그·난이도·추천 이유·탐구주제는 청구기호와 제목 기반 자동 보조 분류입니다.'
+            json.dumps(topics(title, genre, careers), ensure_ascii=False), '원본 정보는 업로드된 동일여고 소장도서 엑셀 기준입니다. 장르·태그·난이도·추천 이유·탐구주제·간략 소개는 청구기호와 제목 기반 자동 보조 분류입니다.'
         ))
     c.executemany('''INSERT INTO books (
         original_no, material_type, reg_no, title, title_norm, author, publisher, pub_year, call_no,
